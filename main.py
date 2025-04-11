@@ -23,7 +23,7 @@ def on_click(x, y, button, pressed):
         if activeWindow is None:
             print("No active window found.")
         else:
-            threads.append(spiralThread(activeWindow, resizeSpeed=1, radiusRate=5, angleRate=40, timeStep=0.01))
+            threads.append(spiralThread(activeWindow, resizeSpeed=10, radiusRate=6, angleRate=10, timeStep=0.005, expandWindow=False))
             print(f"Active window title: {activeWindow.title}")
 
             
@@ -67,10 +67,11 @@ def expand(activeWindow, resizeRate : int, resizeRateMultiplier : int):
     time.sleep(0.01)
     activeWindow.close()
 
-def draw_spiral(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : int, timeStep : float):
+def draw_spiral(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : int, timeStep : float, expandWindow : bool):
     screenWidth, screenHeight = pyautogui.size()
     screenCenter = (screenWidth // 2, screenHeight // 2)
-    r = 1000
+    r_max = 1000
+    r = r_max
     theta = 0
     while(r > 1):
         screenWindowCenter = (screenCenter[0] - activeWindow.size[0] // 2, screenCenter[1] - activeWindow.size[1] // 2)
@@ -78,8 +79,12 @@ def draw_spiral(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : i
 
         activeWindow.moveTo(screenWindowCenter[0] + int(x), screenWindowCenter[1] + int(y))  # Scale the coordinates
         if activeWindow.size[0] > 1 and activeWindow.size[1] > 1:
-            activeWindow.resize(-resizeSpeed,-resizeSpeed)  # Decrement the window size with each iteration
-            
+            scaleRatioWH = float(activeWindow.size[0] / activeWindow.size[1])
+            scaleRatioHW = float(activeWindow.size[1] / activeWindow.size[0])
+            activeWindow.resize(-int(resizeSpeed*(scaleRatioWH)) , -int(resizeSpeed*(scaleRatioHW)))  # Decrement the window size with each iteration
+        else:
+            activeWindow.resize(0, 0)    
+        
             
         
         if r <= radiusRate:
@@ -91,10 +96,13 @@ def draw_spiral(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : i
 
         time.sleep(timeStep)    
 
-    expand(activeWindow, resizeRate=resizeSpeed, resizeRateMultiplier=100)
+    if expandWindow:
+        expand(activeWindow, resizeRate=resizeSpeed, resizeRateMultiplier=5)
+    else:
+        activeWindow.close()
 
-def spiralThread(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : int, timeStep : float):
-    spiral_thread = threading.Thread(target=draw_spiral, args=(activeWindow, resizeSpeed, radiusRate, angleRate, timeStep), daemon=True)
+def spiralThread(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : int, timeStep : float, expandWindow : bool):
+    spiral_thread = threading.Thread(target=draw_spiral, args=(activeWindow, resizeSpeed, radiusRate, angleRate, timeStep, expandWindow), daemon=True)
     spiral_thread.start()
     return spiral_thread
 
