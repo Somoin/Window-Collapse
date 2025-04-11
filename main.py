@@ -12,7 +12,25 @@ exit_event = threading.Event()
 def on_click(x, y, button, pressed):
     if pressed:
         print(f"Clicked at ({x}, {y})")
-        click_event.set()
+        
+        time.sleep(0.5)  # Small delay to ensure the click is registered
+        activeWindow = pyautogui.getActiveWindow()
+        
+        if activeWindow is None:
+            print("No active window found.")
+        else:
+            #spiral_thread = spiralThread(activeWindow, 20, 5, 40)
+            print(f"Active window title: {activeWindow.title}")
+
+            draw_spiral(activeWindow, resizeSpeed=20, radiusRate=10, angleRate=40)
+                
+
+           # while spiral_thread.is_alive():
+             #   if exit_event.is_set():
+             #       spiral_thread.join()
+             #       print("Exiting spiral...")
+            
+
         return False
     
 def on_press(key):
@@ -83,44 +101,36 @@ def spiralThread(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : 
     spiral_thread.start()
     return spiral_thread
 
+def print_info():
+    print("Click the window to collapse")
+    print("Press Q, Esc or C to exit")
+
 def main():
 
+    print_info()
+    
     running = True
 
+    keyboardListener = keyboard.Listener(on_press=on_press)
+    keyboardListener.start()
+
+    mouseListener = mouse.Listener(on_click=on_click)
+    mouseListener.start()
+
     while running:
-        print("Click the window to collapse")
-        print("Press Q, Esc or C to exit")
-
-        keyboardListener = keyboard.Listener(on_press=on_press)
-        keyboardListener.start()
-
-        mouseListener = mouse.Listener(on_click=on_click)
-        mouseListener.start()
-
-        click_event.wait()
-        click_event.clear()
-
         if exit_event.is_set():
+            mouseListener.stop()
+            keyboardListener.stop()
             running = False
-
-        mouseListener.stop()
-
-        time.sleep(0.5)
-
-        activeWindow = pyautogui.getActiveWindow()
+            break
         
-        if activeWindow is None:
-            print("No active window found.")
-            continue
-        else:
-            spiral_thread = spiralThread(activeWindow, 20, 5, 40)
-            #draw_spiral(activeWindow, resizeSpeed=20, radiusRate=5, angleRate=40)
+        if click_event.is_set():
+           print_info()
+           click_event.clear()
 
-            while spiral_thread.is_alive():
-                if exit_event.is_set():
-                    spiral_thread.join()
-                    print("Exiting spiral...")
-                    running = False
+        
+        
+            
 
 if __name__ == "__main__":
     main()
