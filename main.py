@@ -9,9 +9,13 @@ import threading
 click_event = threading.Event()
 exit_event = threading.Event()
 
+threads = []
+
+
 def on_click(x, y, button, pressed):
     if pressed:
         print(f"Clicked at ({x}, {y})")
+        click_event.set()
         
         time.sleep(0.5)  # Small delay to ensure the click is registered
         activeWindow = pyautogui.getActiveWindow()
@@ -19,26 +23,16 @@ def on_click(x, y, button, pressed):
         if activeWindow is None:
             print("No active window found.")
         else:
-            #spiral_thread = spiralThread(activeWindow, 20, 5, 40)
+            threads.append(spiralThread(activeWindow, resizeSpeed=1, radiusRate=5, angleRate=40, timeStep=0.01))
             print(f"Active window title: {activeWindow.title}")
 
-            draw_spiral(activeWindow, resizeSpeed=20, radiusRate=10, angleRate=40)
-                
-
-           # while spiral_thread.is_alive():
-             #   if exit_event.is_set():
-             #       spiral_thread.join()
-             #       print("Exiting spiral...")
             
-
-        return False
     
 def on_press(key):
     try:
         if key.char.lower() == 'q' or key.char.lower() == 'c' or key.esc:
             print("Exiting...")
             exit_event.set()
-            click_event.set()
             return False
     except AttributeError:
         pass
@@ -62,18 +56,18 @@ def archimedian_spiral(r, theta):
     y = r * math.sin(theta)
     return x, y
 
-def expand(activeWindow, resizeRate : int):
+def expand(activeWindow, resizeRate : int, resizeRateMultiplier : int):
     screenWidth, screenHeight = pyautogui.size()
-    screenCenter = (screenWidth // 2, screenHeight // 2)
+    #screenCenter = (screenWidth // 2, screenHeight // 2 - activeWindow.size[1])
 
-    activeWindow.moveTo(0, screenCenter[1])
+    activeWindow.moveTo(0, 0)
     while activeWindow.size[0] < screenWidth:
-        activeWindow.resize(resizeRate, 0)
+        activeWindow.resize(resizeRate*resizeRateMultiplier, resizeRate*resizeRateMultiplier)
 
-    time.sleep(0.1)
+    time.sleep(0.01)
     activeWindow.close()
 
-def draw_spiral(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : int):
+def draw_spiral(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : int, timeStep : float):
     screenWidth, screenHeight = pyautogui.size()
     screenCenter = (screenWidth // 2, screenHeight // 2)
     r = 1000
@@ -86,6 +80,7 @@ def draw_spiral(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : i
         if activeWindow.size[0] > 1 and activeWindow.size[1] > 1:
             activeWindow.resize(-resizeSpeed,-resizeSpeed)  # Decrement the window size with each iteration
             
+            
         
         if r <= radiusRate:
             r = 1
@@ -94,10 +89,12 @@ def draw_spiral(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : i
 
         theta += math.pi / angleRate  # Decrement the angle
 
-        time.sleep(0.02)
+        time.sleep(timeStep)    
 
-def spiralThread(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : int):
-    spiral_thread = threading.Thread(target=draw_spiral, args=(activeWindow, 20, 5, 40))
+    expand(activeWindow, resizeRate=resizeSpeed, resizeRateMultiplier=100)
+
+def spiralThread(activeWindow, resizeSpeed : int, radiusRate : int, angleRate : int, timeStep : float):
+    spiral_thread = threading.Thread(target=draw_spiral, args=(activeWindow, resizeSpeed, radiusRate, angleRate, timeStep), daemon=True)
     spiral_thread.start()
     return spiral_thread
 
@@ -118,6 +115,7 @@ def main():
     mouseListener.start()
 
     while running:
+        time.sleep(1)
         if exit_event.is_set():
             mouseListener.stop()
             keyboardListener.stop()
